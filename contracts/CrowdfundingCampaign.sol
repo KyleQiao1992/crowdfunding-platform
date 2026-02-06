@@ -101,6 +101,56 @@ contract CrowdfundingCampaign {
         emit StateChanged(State.Preparing, State.Active);
     }
 
+    /**
+     * @dev 贡献资金函数
+     * @notice 用户可以多次贡献资金
+     * @notice 如果达到目标金额，状态会自动变更为成功
+     * @notice 只能在活动进行中且未过期时调用
+     */
+    function contribute() external payable inState(State.Active) notExpired {
+        require(
+            msg.value > 0,
+            " CrowdfundingCampaign: contribution must be positive"
+        );
+        // 追踪新贡献者：如果是首次贡献，将其添加到贡献者数组
+        if (contributions[msg.sender] == 0) {
+            contributors.push(msg.sender);
+        }
+        // 更新贡献记录：累加该贡献者的总贡献金额
+        contributions[msg.sender] += msg.value;
+        // 更新总筹集金额
+        totalRaised += msg.value;
+
+        emit Contribution(msg.sender, msg.value);
+
+        if (totalRaised >= goal) {
+            state = State.Success;
+            emit StateChanged(State.Active, State.Success);
+        }
+    }
+
+    /**
+     * @dev 完成活动函数
+     * @notice 在截止时间后调用，根据是否达到目标确定最终状态（成功或失败）
+     * @notice 只能在活动进行中状态时调用
+     */
+    function finalize() external inState(State.Active) {
+        require(
+            block.timestamp >= deadline,
+            "CrowdfundingCampaign: campaign not ended yet"
+        );
+
+        State oldState = state;
+
+        if (totalRaised >= goal) {
+            state = State.Success;
+        } else {
+            state = State.Failed;
+        }
+        // 触发状态变更事件
+        emit StateChanged(oldState, state);
+    }
+
 
     
 
