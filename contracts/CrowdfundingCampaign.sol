@@ -151,8 +151,36 @@ contract CrowdfundingCampaign {
         emit StateChanged(oldState, state);
     }
 
+    /**
+     * @dev 提取资金函数
+     * @notice 只有创建者可以调用，且活动必须处于成功状态
+     * @notice 将合约中的所有资金转移到创建者地址
+     */
+    function withdraw() external onlyOwner inState(State.Success) {
+        state = State.Closed;
+        // 获取合约当前余额
+        uint256 amount = address(this).balance;
+        // 将资金转移到创建者地址
+        (bool success, ) = owner.call{value: amount}("");
 
-    
+        require(success, "CrowdfundingCampaign: withdrawal failed");
+        emit Withdrawal(owner, amount);
+    }
+
+    /**
+     * @dev 退款函数
+     * @notice 活动失败后，贡献者可以申请退款取回自己的资金
+     * @notice 只能在活动失败状态时调用
+     */
+    function refund() external inState(State.Failed) {
+        uint256 amount = contributions[msg.sender];
+        require(amount > 0, "CrowdfundingCampaign: no contributions to refund");
+
+        contributions[msg.sender] = 0; // 防止重入攻击
+        (bool success, ) = msg.sender.call{value: amount}("");
+        require(success, "CrowdfundingCampaign: refund failed");
+        emit Refund(msg.sender, amount);
+    }
 
     /**
      * @dev 获取所有贡献者地址
