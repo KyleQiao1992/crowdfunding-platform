@@ -186,7 +186,7 @@ contract CrowdfundingCampaign {
      * @dev 获取所有贡献者地址
      * @return 贡献者地址数组
      */
-    function getContibutors() external view returns (address[] memory) {
+    function getContributors() external view returns (address[] memory) {
         return contributors;
     }
 
